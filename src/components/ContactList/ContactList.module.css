@@ -29,7 +29,7 @@
     color: #333;
 }
 
-.actionButton {
+.deleteButton {
     background: transparent;
     border: none;
     color: #007bff;
@@ -37,6 +37,6 @@
     transition: color 0.3s ease;
 }
 
-.actionButton:hover {
+.deleteButton:hover {
     color: #0056b3;
 }

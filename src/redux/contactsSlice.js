@@ -1,52 +1,74 @@
-import { createSelector, createSlice } from "@reduxjs/toolkit";
-import { addContact, deleteContact, fetchContacts } from "./contactOps";
-import { selectContacts, selectFilter } from "./selectors";
+import {
+  createSlice,
+  createAsyncThunk,
+  createSelector,
+} from "@reduxjs/toolkit";
+import axios from "axios";
 
-const handlePending = state => {
-  state.isLoading = true;
+const initialState = {
+  items: [],
+  loading: false,
+  error: null,
 };
-
-const handleRejected = (state, action) => {
-  state.isLoading = false;
-  state.error = action.payload;
-};
-
+export const fetchContacts = createAsyncThunk("contacts/fetchAll", async () => {
+  const response = await axios.get(
+    "https://670a28e5af1a3998baa3379a.mockapi.io/contacts"
+  );
+  return response.data;
+});
+export const addContact = createAsyncThunk(
+  "contacts/addContact",
+  async contact => {
+    const response = await axios.post(
+      "https://670a28e5af1a3998baa3379a.mockapi.io/contacts",
+      contact
+    );
+    return response.data;
+  }
+);
+export const deleteContact = createAsyncThunk(
+  "contacts/deleteContact",
+  async contactId => {
+    await axios.delete(
+      `https://670a28e5af1a3998baa3379a.mockapi.io/contacts/${contactId}`
+    );
+  }
+);
 const contactsSlice = createSlice({
   name: "contacts",
-  initialState: { items: [], isLoading: false, error: null },
-
+  initialState,
   extraReducers: builder => {
     builder
-      .addCase(fetchContacts.pending, handlePending)
+      .addCase(fetchContacts.pending, state => {
+        state.loading = true;
+      })
       .addCase(fetchContacts.fulfilled, (state, action) => {
-        state.isLoading = false;
-        state.error = false;
+        state.loading = false;
         state.items = action.payload;
       })
-      .addCase(fetchContacts.rejected, handleRejected)
-      .addCase(addContact.pending, handlePending)
+      .addCase(fetchContacts.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.error.message;
+      })
       .addCase(addContact.fulfilled, (state, action) => {
-        state.isLoading = false;
-        state.error = false;
         state.items.push(action.payload);
       })
-      .addCase(addContact.rejected, handleRejected)
-      .addCase(deleteContact.pending, handlePending)
       .addCase(deleteContact.fulfilled, (state, action) => {
-        state.isLoading = false;
-        state.error = false;
-        const index = state.items.findIndex(task => task.id === action.payload);
-        if (index !== -1) state.items.splice(index, 1);
-      })
-      .addCase(deleteContact.rejected, handleRejected);
+        state.items = state.items.filter(
+          contact => contact.id !== action.payload
+        );
+      });
   },
 });
-export const contactsReducer = contactsSlice.reducer;
 
 export const selectFilteredContacts = createSelector(
-  [selectContacts, selectFilter],
-  (contacts, filter) =>
-    contacts.filter(contact =>
+  state => state.contacts.items,
+  state => state.filters.name,
+  (contacts, filter) => {
+    return contacts.filter(contact =>
       contact.name.toLowerCase().includes(filter.toLowerCase())
-    )
+    );
+  }
 );
+
+export default contactsSlice.reducer;
